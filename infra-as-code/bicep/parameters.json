@@ -3,16 +3,16 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "baseName": {
-        "value": ""
+        "value": "REPLACE_ME"
       },
       "developmentEnvironment": {
         "value": false
       },
       "appGatewayListenerCertificate": {
-        "value": ""
+        "value": "REPLACE_ME"
       },
       "jumpBoxAdminPassword": {
-        "value": ""
+        "value": "REPLACE_ME"
       }
     }
 }

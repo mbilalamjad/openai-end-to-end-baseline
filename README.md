@@ -67,7 +67,7 @@ Use the following to deploy the infrastructure.
 
 The following steps are required to deploy the infrastructure from the command line.
 
-1. In your bash shell (or VSCode session) with Azure CLI and Bicep installed, navigate to the root directory of this repository (AppServicesRI)
+1. In your bash shell (or VSCode session) with Azure CLI and Bicep installed, navigate to the root directory of this repository
 
 1. Login and set subscription
 
@@ -106,37 +106,41 @@ az account set --subscription xxxxx
      ```
 
 1. Update the infra-as-code/parameters file
+  - Provide an admin password in jumpBoxAdminPassword parameter the  for the jump box; it must satisfy the [complexity requirements for Windows](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
+  - Provide the  base64 cert data from $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE variable into the appGatewayListenerCertificate parameter.
 
 ```json
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "baseName": {
-      "value": ""
-    },
-    "developmentEnvironment": {
-      "value": true
-    },
-    "appGatewayListenerCertificate": {
-      "value": "[base64 cert data from $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE]"
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "baseName": {
+        "value": "REPLACE_ME"
+      },
+      "developmentEnvironment": {
+        "value": false
+      },
+      "appGatewayListenerCertificate": {
+        "value": "REPLACE_ME"
+      },
+      "jumpBoxAdminPassword": {
+        "value": "REPLACE_ME"
+      }
     }
-  }
 }
 ```
 
 1. Run the following command to create a resource group and deploy the infrastructure. Make sure:
 
-   - The location you choose [supports availability zones](https://learn.microsoft.com/azure/reliability/availability-zones-service-support)
-   - The BASE_NAME contains only lowercase letters and is between 6 and 8 characters. Most resource names will include this text.
+   - The location you choose [supports availability zones (AZs)](https://learn.microsoft.com/azure/reliability/availability-zones-service-support) and the [model version](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#standard-deployment-model-availability) gpt-35-turbo 0613 which is used in this deployment. Also make sure you have quota in the region for the resources being deployed particularly for App Service Plan SKU P2V2 which is used in this deployment. The following regions eastus, eastus2, francecentral, japaneast, swedencentral, switzerlandnorth, uksouth support both AZs and the model version.
+   - The BASE_NAME contains only lowercase letters and is between 6 and 8 characters. Most resource names will include this text including resources like keyvault and storage account which need to be globally unique so provide this value accordingly.
    - You choose a valid resource group name.
-   - You will be prompted for an admin password for the jump box; it must satisfy the [complexity requirements for Windows](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
 
 ```bash
-LOCATION=eastus
-BASE_NAME=<base-resource-name (between 6 and 8 lowercase characters)>
+LOCATION=REPLACE_ME
+BASE_NAME=REPLACE_ME
+RESOURCE_GROUP=REPLACE_ME
 
-RESOURCE_GROUP=<resource-group-name>
 az group create -l $LOCATION -n $RESOURCE_GROUP
 
 # This takes about 30 minutes to run.
@@ -148,9 +152,9 @@ az deployment group create -f ./infra-as-code/bicep/main.bicep \
 
 ### Create, test, and deploy a Prompt flow
 
-1. Connect to the virtual network via Azure Bastion and the jump box (deployed as part of this solution) or through a force-tunneled VPN or virtual network peering that you manually configure.
+1. Connect to the virtual network via Azure Bastion and the jump box (deployed as part of this solution) or through a force-tunneled VPN or virtual network peering that you manually configure. The username for the admin of the jumpbox is vmadmin and the password is what you provided in the parameters.json file.
 
-1. Open the [Machine Learning Workspace](https://ml.azure.com/) and choose your workspace. Ensure you have [enabled Prompt flow in your Azure Machine Learning workspace](https://learn.microsoft.com/azure/machine-learning/prompt-flow/get-started-prompt-flow?view=azureml-api-2#prerequisites-enable-prompt-flow-in-your-azure-machine-learning-workspace).
+1. Open the [Machine Learning Workspace](https://ml.azure.com/) in the jump box and choose your workspace. Ensure you have [enabled Prompt flow in your Azure Machine Learning workspace](https://learn.microsoft.com/azure/machine-learning/prompt-flow/get-started-prompt-flow?view=azureml-api-2#prerequisites-enable-prompt-flow-in-your-azure-machine-learning-workspace) by following the below steps.
 
 1. Create a prompt flow connection to your gpt35 Azure OpenAI deployment. This will be used by the prompt flow you clone in the next step.
     1. Click on 'Prompt flow' in the left navigation in Machine Learning Studio
@@ -174,20 +178,21 @@ az deployment group create -f ./infra-as-code/bicep/main.bicep \
         - augmented_chat
     1. Save
 
-1. Add runtime
+1. Start compute session with advanced settings
 
-   - Click Add runtime
-   - Add compute instance runtime and give it a name
-   - Choose the compute instance created by the Bicep  
-   - Accept the other defaults and click 'Create'
+   - Click Start with advanced settings
+   - Select Compute instance in compute type
+   - Choose the compute instance created by the Bicep and click next
+   - Keep the default settings for Base Image settings and click next
+   - Review your setting and click Apply and start compute session
 
 1. Test the flow
 
    - Wait for the runtime to be created
    - Select the runtime in the UI
    - Click on 'Chat' on the UI
-   - Enter a question
-   - The response should echo your question with 'Echo' appended
+   - Enter the sample question in the textbox already or enter one from your own
+   - You should get an appropriate response
 
 ### Deploy to Azure Machine Learning managed online endpoint
 
@@ -224,37 +229,14 @@ The CI/CD pipeline would likely use a [self-hosted agent](https://learn.microsof
 
 We need a workaround to upload the file to the storage account because we have not implemented a CI/CD pipeline with a self-hosted agent. There are two workaround steps you need to do in order to manually upload the zip file using the portal.
 
-1. The deployed storage account does not allow public access, so you will need to temporarily allow access public access from your IP address.
-1. You must authorize your user to upload a blob to the storage account.
+1. The deployed storage account does not allow public access, so you will need to access it from a browser in the jump box.
+1. You must authorize your user to upload a blob to the storage account if not already authorized.
 
 Run the following to:
 
-- Allow public access from your IP address.
-- Give the logged-in user permission to upload a blob
-- Upload the zip file `./website/chatui.zip` to the existing `deploy` container
-- Tell the web app to restart
-
-```bash
-CLIENT_IP_ADDRESS=<your-public-ip-address>
-
-STORAGE_ACCOUNT_PREFIX=st
-WEB_APP_PREFIX=app-
-NAME_OF_STORAGE_ACCOUNT="$STORAGE_ACCOUNT_PREFIX$BASE_NAME"
-NAME_OF_WEB_APP="$WEB_APP_PREFIX$BASE_NAME"
-LOGGED_IN_USER_ID=$(az ad signed-in-user show --query id -o tsv)
-RESOURCE_GROUP_ID=$(az group show --resource-group $RESOURCE_GROUP --query id -o tsv)
-STORAGE_BLOB_DATA_CONTRIBUTOR=ba92f5b4-2d11-453d-a403-e96b0029c9fe
-
-az storage account network-rule add -g $RESOURCE_GROUP --account-name "$NAME_OF_STORAGE_ACCOUNT" --ip-address $CLIENT_IP_ADDRESS
-az role assignment create --assignee-principal-type User --assignee-object-id $LOGGED_IN_USER_ID --role $STORAGE_BLOB_DATA_CONTRIBUTOR --scope $RESOURCE_GROUP_ID
-
-az storage blob upload -f ./website/chatui.zip \
-  --account-name $NAME_OF_STORAGE_ACCOUNT \
-  --auth-mode login \
-  -c deploy -n chatui.zip
-
-az webapp restart --name $NAME_OF_WEB_APP --resource-group $RESOURCE_GROUP
-```
+- Open the Azure portal in a browser inside the jump box.
+- Navigate to the storage account and upload the zip file `./website/chatui.zip` to the existing `deploy` container
+- After that navigate to the web app and restart it.
 
 ### Validate the web app
 
@@ -262,15 +244,9 @@ This section will help you to validate that the workload is exposed correctly an
 
 #### Steps
 
-1. Get the public IP address of the Application Gateway.
+1. Get the public IP address of the Application Gateway from the portal.
 
    > :book: The app team conducts a final acceptance test to be sure that traffic is flowing end-to-end as expected, so they place a request against the Azure Application Gateway endpoint.
-
-   ```bash
-   # query the Azure Application Gateway Public Ip
-   APPGW_PUBLIC_IP=$(az network public-ip show --resource-group $RESOURCE_GROUP --name "pip-$BASE_NAME" --query [ipAddress] --output tsv)
-   echo APPGW_PUBLIC_IP: $APPGW_PUBLIC_IP
-   ```
 
 1. Create an `A` record for DNS.
 
