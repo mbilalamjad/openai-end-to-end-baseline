@@ -100,7 +100,7 @@ az account set --subscription xxxxx
      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out appgw.crt -keyout appgw.key -subj "/CN=${DOMAIN_NAME_APPSERV_BASELINE}/O=Contoso" -addext "subjectAltName = DNS:${DOMAIN_NAME_APPSERV_BASELINE}" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth"
      ```
 
-    ```bash
+     ```bash
      openssl pkcs12 -export -out appgw.pfx -in appgw.crt -inkey appgw.key -passout pass:
      ```
 
