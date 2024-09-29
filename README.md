@@ -51,6 +51,8 @@ The following are prerequisites.
 - The deployment must be started by a user who has sufficient permissions to assign [roles](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles), such as a User Access Administrator or Owner.
 - Ensure you have the [Azure CLI installed](https://learn.microsoft.com/cli/azure/install-azure-cli)
 - Ensure you have the [az Bicep tools installed](https://learn.microsoft.com/azure/azure-resource-manager/bicep/install)
+- Git [installed](https://git-scm.com/downloads)
+- WSL [installed](https://learn.microsoft.com/en-us/windows/wsl/install) if using a Windows machine
 
 Use the following to deploy the infrastructure.
 
