@@ -67,7 +67,12 @@ Use the following to deploy the infrastructure.
 
 The following steps are required to deploy the infrastructure from the command line.
 
-1. In your bash shell (or VSCode session) with Azure CLI and Bicep installed, navigate to the root directory of this repository
+1. In your shell, clone this repo and navigate to the root directory of this repository.
+
+   ```bash
+   git clone https://github.com/Azure-Samples/openai-end-to-end-baseline
+   cd openai-end-to-end-baseline
+   ```
 
 1. Login and set subscription
 
