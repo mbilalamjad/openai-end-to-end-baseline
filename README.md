@@ -25,7 +25,6 @@ The implementation covers the following scenarios:
 
 1. Authoring a flow - Authoring a flow using prompt flow in an Azure Machine Learning workspace
 1. Deploying a flow to Azure Machine Learning (AML hosted option) - The deployment of an executable flow to an Azure Machine Learning online endpoint. The client UI that is hosted in Azure App Service accesses the deployed flow.
-1. Deploying a flow to Azure App Service (Self-hosted option) - The deployment of an executable flow as a container to Azure App Service. The client UI that accesses the flow is also hosted in Azure App Service.
 
 ### Authoring a flow
 
@@ -41,14 +40,6 @@ The diagram further illustrates how the Machine Learning Workspace is configured
 
 
 The Azure Machine Learning deployment architecture diagram illustrates how a front-end web application, deployed into a [network-secured App Service](https://github.com/Azure-Samples/app-service-baseline-implementation), [connects to a managed online endpoint through a private endpoint](https://learn.microsoft.com/azure/machine-learning/how-to-configure-private-link) in a virtual network. Like the authoring flow, the diagram illustrates how the Machine Learning Workspace is configured for [Workspace managed virtual network isolation](https://learn.microsoft.com/azure/machine-learning/how-to-managed-network). The deployed flow is able to connect to required resources such as Azure OpenAI and Cognitive Search through managed private endpoints.
-
-### Deploying a flow to Azure App Service (alternative)
-
-![Diagram of the deploying a flow to Azure App Service.](docs/media/openai-chat-e2e-deployment-appservices.png)
-
-The Azure App Service deployment architecture diagram illustrates how the same prompt flow can be containerized and deployed to Azure App Service alongside the same front-end web application from the prior architecture. This solution is a completely self-hosted, externalized alternative to an Azure Machine Learning managed online endpoint.
-
-The flow is still authored in a network-isolated Azure Machine Learning workspace. To deploy in App Service in this architecture, the flows need to be containerized and pushed to the Azure Container Registry that is accessible through private endpoints to the App Service.
 
 ## Deploy
 
@@ -76,19 +67,19 @@ The following steps are required to deploy the infrastructure from the command l
 
 2. Login and set subscription. Note az login isn't needed if running in cloud shell.
 
-```bash
-az login
-az account set --subscription xxxxx
-```
+    ```bash
+    az login
+    az account set --subscription xxxxx
+    ```
 
 3. Obtain the App gateway certificate
    Azure Application Gateway support for secure TLS using Azure Key Vault and managed identities for Azure resources. This configuration enables end-to-end encryption of the network traffic using standard TLS protocols. For production systems, you should use a publicly signed certificate backed by a public root certificate authority (CA). Here, we will use a self-signed certificate for demonstrational purposes.
 
    - Set a variable for the domain used in the rest of this deployment.
 
-     ```bash
-     export DOMAIN_NAME_APPSERV_BASELINE="contoso.com"
-     ```
+    ```bash
+    export DOMAIN_NAME_APPSERV_BASELINE="contoso.com"
+    ```
 
    - Generate a client-facing, self-signed TLS certificate.
 
@@ -96,25 +87,25 @@ az account set --subscription xxxxx
 
      Create the certificate that will be presented to web clients by Azure Application Gateway for your domain.
 
-     ```bash
-     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out appgw.crt -keyout appgw.key -subj "/CN=${DOMAIN_NAME_APPSERV_BASELINE}/O=Contoso" -addext "subjectAltName = DNS:${DOMAIN_NAME_APPSERV_BASELINE}" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth"
-     ```
+      ```bash
+      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out appgw.crt -keyout appgw.key -subj "/CN=${DOMAIN_NAME_APPSERV_BASELINE}/O=Contoso" -addext "subjectAltName = DNS:${DOMAIN_NAME_APPSERV_BASELINE}" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth"
+      ```
 
-     ```bash
-     openssl pkcs12 -export -out appgw.pfx -in appgw.crt -inkey appgw.key -passout pass:
-     ```
+      ```bash
+      openssl pkcs12 -export -out appgw.pfx -in appgw.crt -inkey appgw.key -passout pass:
+      ```
 
    - Base64 encode the client-facing certificate.
 
      :bulb: No matter if you used a certificate from your organization or generated one from above, you'll need the certificate (as `.pfx`) to be Base64 encoded for proper storage in Key Vault later.
 
-    ```bash
-    export APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE=$(cat appgw.pfx | base64 | tr -d '\n')
-    ```
-    
-    ```bash
-    echo APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE: $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE
-    ```
+      ```bash
+      export APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE=$(cat appgw.pfx | base64 | tr -d '\n')
+      ```
+      
+      ```bash
+      echo APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE: $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE
+      ```
 
 4. Update the infra-as-code/parameters file
   - Provide an admin password in jumpBoxAdminPassword parameter the  for the jump box; it must satisfy the [complexity requirements for Windows](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
@@ -147,23 +138,23 @@ az account set --subscription xxxxx
    - The BASE_NAME contains only lowercase letters and is between 6 and 8 characters. Most resource names will include this text including resources like keyvault and storage account which need to be globally unique so provide this value accordingly.
    - You choose a valid resource group name.
 
-```bash
-LOCATION=REPLACE_ME
-BASE_NAME=REPLACE_ME
-RESOURCE_GROUP=REPLACE_ME
-```
+    ```bash
+    LOCATION=REPLACE_ME
+    BASE_NAME=REPLACE_ME
+    RESOURCE_GROUP=REPLACE_ME
+    ```
 
-```bash
-az group create -l $LOCATION -n $RESOURCE_GROUP
-```
+    ```bash
+    az group create -l $LOCATION -n $RESOURCE_GROUP
+    ```
 
-```bash
-# This takes about 30 minutes to run.
-az deployment group create -f ./infra-as-code/bicep/main.bicep \
-  -g $RESOURCE_GROUP \
-  -p @./infra-as-code/bicep/parameters.json \
-  -p baseName=$BASE_NAME
-```
+    ```bash
+    # This takes about 30 minutes to run.
+    az deployment group create -f ./infra-as-code/bicep/main.bicep \
+      -g $RESOURCE_GROUP \
+      -p @./infra-as-code/bicep/parameters.json \
+      -p baseName=$BASE_NAME
+    ```
 
 ### Create, test, and deploy a Prompt flow
 
