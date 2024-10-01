@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
       "baseName": {
-        "value": "REPLACE_ME"
+        "value": ""
       },
       "developmentEnvironment": {
         "value": false
