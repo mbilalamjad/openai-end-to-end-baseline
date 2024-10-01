@@ -63,7 +63,7 @@ The following steps are required to deploy the infrastructure from the command l
 1. In your shell, clone this repo and navigate to the root directory of this repository.
 
    ```bash
-   git clone https://github.com/Azure-Samples/openai-end-to-end-baseline
+   git clone https://github.com/mbilalamjad/openai-end-to-end-baseline
    cd openai-end-to-end-baseline
    ```
 
