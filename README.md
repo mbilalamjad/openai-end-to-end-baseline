@@ -136,7 +136,7 @@ The following steps are required to deploy the infrastructure from the command l
 
 5. Run the following command to create a resource group and deploy the infrastructure. Make sure:
 
-   - The location you choose [supports availability zones (AZs)](https://learn.microsoft.com/azure/reliability/availability-zones-service-support) and the [model version](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#standard-deployment-model-availability) gpt-35-turbo 0613 which is used in this deployment. Also make sure you have quota in the region for the resources being deployed particularly for App Service Plan SKU P2V2 which is used in this deployment. The following regions eastus, eastus2, francecentral, japaneast, swedencentral, switzerlandnorth, uksouth support both AZs and the model version.
+   - The location you choose [supports availability zones (AZs)](https://learn.microsoft.com/azure/reliability/availability-zones-service-support) and the [model version](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#standard-deployment-model-availability) gpt-35-turbo 0613 which is used in this deployment. Also make sure you have quota in the region for the resources being deployed particularly for App Service Plan SKU P2V2 which is used in this deployment. The following regions francecentral, japaneast, swedencentral, switzerlandnorth, uksouth support both AZs and the model version.
    - The BASE_NAME contains only lowercase letters and is between 6 and 8 characters. Most resource names will include this text including resources like keyvault and storage account which need to be globally unique so provide this value accordingly.
    - You choose a valid resource group name.
 
