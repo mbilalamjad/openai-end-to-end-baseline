@@ -155,7 +155,6 @@ code ./infra-as-code/bicep/parameters.json
     ```
 
     ```bash
-    # This takes about 30 minutes to run.
     az deployment group create -f ./infra-as-code/bicep/main.bicep -g $RESOURCE_GROUP -p @./infra-as-code/bicep/parameters.json -p baseName=$BASE_NAME
     ```
 
