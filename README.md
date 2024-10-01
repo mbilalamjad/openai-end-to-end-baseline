@@ -154,12 +154,11 @@ code ./infra-as-code/bicep/parameters.json
     az group create -l $LOCATION -n $RESOURCE_GROUP
     ```
 
-This takes about 30 minutes to run.
-
     ```bash
+    # This takes about 30 minutes to run.
     az deployment group create -f ./infra-as-code/bicep/main.bicep -g $RESOURCE_GROUP -p @./infra-as-code/bicep/parameters.json -p baseName=$BASE_NAME
     ```
-    
+
 ### Create, test, and deploy a Prompt flow
 
 1. Connect to the virtual network via Azure Bastion and the jump box (deployed as part of this solution) or through a force-tunneled VPN or virtual network peering that you manually configure. The username for the admin of the jumpbox is vmadmin and the password is what you provided in the parameters.json file.
