@@ -60,14 +60,14 @@ Use the following to deploy the infrastructure.
 
 The following steps are required to deploy the infrastructure from the command line.
 
-1. In your shell, clone this repo and navigate to the root directory of this repository.
+1. In your local or cloud shell, clone this repo and navigate to the root directory of this repository.
 
    ```bash
    git clone https://github.com/mbilalamjad/openai-end-to-end-baseline
    cd openai-end-to-end-baseline
    ```
 
-2. Login and set subscription. Note az login isn't needed if running in cloud shell.
+2. Login and set subscription. Note az login isn't needed if your are using Azure Cloud Shell.
 
     ```bash
     az login
@@ -109,9 +109,13 @@ The following steps are required to deploy the infrastructure from the command l
       echo APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE: $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE
       ```
 
-4. Update the infra-as-code/parameters file
+4. Update the infra-as-code/parameters file in cloud shell
   - Provide an admin password in jumpBoxAdminPassword parameter the  for the jump box; it must satisfy the [complexity requirements for Windows](https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements).
   - Provide the  base64 cert data from $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV_BASELINE variable into the appGatewayListenerCertificate parameter.
+
+```bash
+code ./infra-as-code/bicep/parameters.json 
+```
 
 ```json
 {
