@@ -1,18 +1,32 @@
 @lab.Title
 
+@lab.ActivityGroup(initialsurvey)
+
+===
+
 <initial introduction>
 
-## Login to the Lab VM
-When the lab first launches you will need to set up the initial lab environment.
+## Sign in to the lab virtual machine (VM)
 
-1. Enter the below password at the password prompt to login<br>
-    +++@lab.VirtualMachine(Win11-Pro-Base).Password+++
-1. On the lab virtual machine, open the edge browser and navigate to the Azure portal at<br>
-    +++https://portal.azure.com+++
-1. You will be prompted to login into Azure. Use the following details to complete the login:
-    1. Username: +++@lab.CloudPortalCredential(User1).Username+++
-    1. Password: +++@lab.CloudPortalCredential(User1).Password+++
-1. Accept all of the initial prompts to complete the portal login.
+When the lab first launches, you'll need to set up the initial lab environment.
+
+1. [] Sign in to Windows with the following lab credentials:
+
+    | Item | Value |
+    |:---------|:---------|
+    | Username | **Lab User** |
+    | Password | +++@lab.VirtualMachine(Win11-Pro-Base).Password+++ |
+
+1. [] On the lab VM, open Microsoft Edge, then go to `https://portal.azure.com`.
+
+1. [] Sign in with the following lab credentials:
+
+    | Item | Value |
+    |:---------|:---------|
+    | Username | `@lab.CloudPortalCredential(User1).Username` |
+    | Password | `@lab.CloudPortalCredential(User1).Password` |
+
+1. [] Accept or skip the initial prompts to sign in.
 
 ===
 
@@ -45,7 +59,7 @@ The implementation covers the following scenarios:
 
 ### Setting up Azure AI Foundry to host agents
 
-Azure AI Foundry hosts Azure AI Agent service as a capability. Azure AI Agent service's REST APIs are exposed as a AI Foundry private endpoint within the network, and the agents' all egress through a delegated subnet which is routed through Azure Firewall for any internet traffic. This architecture deploys the Azure AI Agent service with its depedencies hosted within your own Azure subscription. As such, this architecture includes an Azure Storage account, Azure AI Search instance, and an Azure Cosmos DB account specifically for the Azure AI Agent service to manage.
+Azure AI Foundry hosts Azure AI Agent service as a capability. Azure AI Agent service's REST APIs are exposed as an AI Foundry private endpoint within the network, and the agents' all egress through a delegated subnet which is routed through Azure Firewall for any internet traffic. This architecture deploys the Azure AI Agent service with dependencies hosted within your own Azure subscription. As such, this architecture includes an Azure Storage account, Azure AI Search instance, and an Azure Cosmos DB account specifically for the Azure AI Agent service to manage.
 
 ### Deploying an agent into Azure AI Agent service
 
@@ -65,11 +79,11 @@ A chat UI application is deployed into a private Azure App Service. The UI is ac
 
 ## Prerequisites
 
-  > :bulb: Note that the following pre-reqs have been taken off already as part of this lab environment. We recommend to review the steps for learning purposes and proceed to Exercise 1.
+> :bulb: Note that the following prereqs have been completed already as part of this lab environment. We recommend reviewing the steps for learning purposes before proceeding to Exercise 1.
 
 - An [Azure subscription](https://azure.microsoft.com/free/)
 
-The subscription must have all of the resource providers used in this deployment [registered](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-providers-and-types#register-resource-provider).
+The subscription must have all the resource providers used in this deployment [registered](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-providers-and-types#register-resource-provider).
 
 * Microsoft.AlertsManagement
 * Microsoft.App
@@ -100,8 +114,8 @@ The subscription must have the following quota available in the region you choos
 
 Your deployment user must have the following permissions at the subscription scope.
 
-  - Ability to assign [Azure roles](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles) on newly created resource groups and resources. (E.g. User Access Administrator or Owner)
-  - Ability to purge deleted AI services resources. (E.g. Contributor or Cognitive Services Contributor)
+- Ability to assign [Azure roles](https://learn.microsoft.com/azure/role-based-access-control/built-in-roles) on newly created resource groups and resources. (E.g. User Access Administrator or Owner)
+- Ability to purge deleted AI services resources. (E.g. Contributor or Cognitive Services Contributor)
 
 The [Azure CLI installed](https://learn.microsoft.com/cli/azure/install-azure-cli)
 
@@ -113,73 +127,98 @@ The [OpenSSL CLI](https://docs.openssl.org/3.5/man7/ossl-guide-introduction/#get
 
 The following steps are required to deploy the infrastructure from the command line using the bicep files from the repository.
 
-1. Open Azure Cloud Shell, choose Bash and set your subscription like so
+1. [] In the Azure portal, select **Cloud Shell** from the global controls at the top of the page.
 
-!IMAGE[0d94e2v5.jpg](instructions294461/0d94e2v5.jpg)
+    !IMAGE[xq2vpkqc.jpg](instructions300210/xq2vpkqc.jpg)
 
-!IMAGE[3o1d6ta0.jpg](instructions294461/3o1d6ta0.jpg)
+1. [] In the **Welcome to Azure Cloud Shell** pane, select **Bash**.
 
-2. In Azure Cloud shell, clone the repo and navigate to the root directory of this repository.
+    !IMAGE[x07ouf7n.jpg](instructions300210/x07ouf7n.jpg)
+
+1. [] Select the **Subscription** dropdown menu, select **@lab.CloudSubscription.Name**, then select **Apply**.
+
+    !IMAGE[tpzm45f5.jpg](instructions300210/tpzm45f5.jpg)
+
+1. [] In Cloud Shell, clone the repo, then navigate to the root directory of the repository.
  
-   +++git clone https://github.com/mbilalamjad/openai-end-to-end-baseline+++
-   
-   +++cd openai-end-to-end-baseline+++
+    +++git clone https://github.com/mbilalamjad/openai-end-to-end-baseline+++
+    
+    +++cd openai-end-to-end-baseline+++
+
+1. [] Obtain the App gateway certificate
+
+    Azure Application Gateway includes support for secure TLS using Azure Key Vault and managed identities for Azure resources. This configuration enables end-to-end encryption of the network traffic going to the web application.
+
+    - [] Set a variable for the domain used in the rest of this deployment.
+
+        +++DOMAIN_NAME_APPSERV="contoso.com"+++
+
+    - [] Generate a client-facing, self-signed TLS certificate.
+
+        > :warning: Do not use the certificate created by this script for production deployments. 
+        >
+        > The use of self-signed certificates is for illustration purposes only. For your chat application traffic, use your organization's requirements for procurement and lifetime management of TLS certificates, *even for development purposes*.
+
+        Create the certificate that will be presented to web clients by Azure Application Gateway for your domain.
+
+        +++openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out appgw.crt -keyout appgw.key -subj "/CN=${DOMAIN_NAME_APPSERV}/O=Contoso" -addext "subjectAltName = DNS:${DOMAIN_NAME_APPSERV}" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth"+++
+
+        +++openssl pkcs12 -export -out appgw.pfx -in appgw.crt -inkey appgw.key -passout pass:+++
 
 
-3. Obtain the App gateway certificate
+    - [] Base64-encode the client-facing certificate.
 
-   Azure Application Gateway includes support for secure TLS using Azure Key Vault and managed identities for Azure resources. This configuration enables end-to-end encryption of the network traffic going to the web application.
+        +++APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV=$(cat appgw.pfx | base64 | tr -d '\n')+++
 
-   - Set a variable for the domain used in the rest of this deployment.
+        +++echo APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV: $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV+++
 
-     +++DOMAIN_NAME_APPSERV="contoso.com"+++
+        >[!knowledge] Whether you used a certificate from your organization or generated one above, you'll need the certificate (as .pfx) to be Base64 encoded for storage in Key Vault.
 
-   - Generate a client-facing, self-signed TLS certificate.
+1. [] Set the deployment location to one that [supports availability zones](https://learn.microsoft.com/azure/reliability/availability-zones-service-support) and has available quota.
 
-     > :warning: Do not use the certificate created by this script for production deployments. The use of self-signed certificates are provided for ease of illustration purposes only. For your chat application traffic, use your organization's requirements for procurement and lifetime management of TLS certificates, *even for development purposes*.
+    +++LOCATION=swedencentral+++
 
-     Create the certificate that will be presented to web clients by Azure Application Gateway for your domain.
+    >[!note] This deployment has been tested in the following locations: swedencentral, eastus, eastus2, switzerlandnorth. You might be successful in other locations as well.
 
-     +++openssl req -x509 -nodes -days 365 -newkey rsa:2048 -out appgw.crt -keyout appgw.key -subj "/CN=${DOMAIN_NAME_APPSERV}/O=Contoso" -addext "subjectAltName = DNS:${DOMAIN_NAME_APPSERV}" -addext "keyUsage = digitalSignature" -addext "extendedKeyUsage = serverAuth"+++
+1. [] Set the base name value that will be used as part of the Azure resource names for the resources deployed in this solution. 
 
-     +++openssl pkcs12 -export -out appgw.pfx -in appgw.crt -inkey appgw.key -passout pass:+++
+    +++BASE_NAME=@lab.LabInstance.Id+++
 
+    >[!note] All DNS names will include this text, so it must be unique. Set between 6 to 8 numbers or lowercase characters. 
 
-   - Base64 encode the client-facing certificate.
+1. [] Create a resource group and deploy the infrastructure.
 
-     :bulb: No matter if you used a certificate from your organization or generated one from above, you'll need the certificate (as .pfx) to be Base64 encoded for storage in Key Vault.
+    +++RESOURCE_GROUP=rg-chat-baseline+++
 
-     +++APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV=$(cat appgw.pfx | base64 | tr -d '\n')+++
+    +++az group create -l $LOCATION -n $RESOURCE_GROUP+++
 
-     +++echo APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV: $APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV+++
+    +++PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)+++
 
-4. Set the deployment location to one that [supports availability zones](https://learn.microsoft.com/azure/reliability/availability-zones-service-support) and has available quota.
+    +++az deployment group create -f ./infra-as-code/bicep/main.bicep -g $RESOURCE_GROUP -p appGatewayListenerCertificate=${APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV} -p baseName=${BASE_NAME} -p yourPrincipalId=${PRINCIPAL_ID}+++
 
-   This deployment has been tested in the following locations: eastus, eastus2, switzerlandnorth. You might be successful in other locations as well.
+    >[!note] You might run into transient deployment failure, in case that happens, rerun the last command to redeploy which will incrementally deploy resource that failed to deploy previously.
 
-   +++LOCATION=swedencentral+++
+1. [] Set an admin password for the jump box. Please note that while typing, the prompt will not display anything being entered and will not show any cursor movement. 
 
-5. Set the base name value that will be used as part of the Azure resource names for the resources deployed in this solution. Base resource name, between 6 and 8 lowercase characters, all DNS names will include this text, so it must be unique.
+    Enter the following, then wait a few seconds before selecting **Enter**.
 
-   +++BASE_NAME=@lab.LabInstance.Id+++
+    +++@lab.VirtualMachine(Win11-Pro-Base).Password+++
 
-6. Create a resource group and deploy the infrastructure.
+    !IMAGE[rjjdphu5.jpg](instructions300210/rjjdphu5.jpg)
 
-   *There is an optional tracking ID on this deployment. To opt out of its use, add the following parameter to the deployment code below: -p telemetryOptOut true.*
+    >[!alert] The deployment may take around **35 minutes**.
 
-	>[!Alert]**This might take approximately 35 minutes.**
+1. [] To follow the deployment in more detail, in the Azure portal, select the portal menu icon in the upper-left corner, then select **Resource groups**.
 
-   +++RESOURCE_GROUP=rg-chat-baseline+++
+    !IMAGE[d7d8uwm4.jpg](instructions300210/d7d8uwm4.jpg)
 
-   +++az group create -l $LOCATION -n $RESOURCE_GROUP+++
+1. [] Select the **rg-chat-baseline** resource group.
 
-   +++PRINCIPAL_ID=$(az ad signed-in-user show --query id -o tsv)+++
+1. [] Under the **Essentials** section, you can select the link under **Deployments** to view deployments in more detail, or periodically **Refresh** the page.
 
-   +++az deployment group create -f ./infra-as-code/bicep/main.bicep -g $RESOURCE_GROUP -p appGatewayListenerCertificate=${APP_GATEWAY_LISTENER_CERTIFICATE_APPSERV} -p baseName=${BASE_NAME} -p yourPrincipalId=${PRINCIPAL_ID}+++
+    !IMAGE[kdvtu4pb.jpg](instructions300210/kdvtu4pb.jpg)
 
-   You will be prompted for an admin password for the jump box. You can type or copy & paste the following password. Please note that while typing/pasting, the prompt will not show and indicate anything being entered for security reasons. Once typed/pasted, hit enter.
-   
-   +++@lab.VirtualMachine(Win11-Pro-Base).Password+++
+1. [] Wait until the deployment completes before proceeding.
 
 ===
 
@@ -187,89 +226,184 @@ The following steps are required to deploy the infrastructure from the command l
 
 To test this scenario, you'll be deploying an AI agent included in this repository. The agent uses a GPT model combined with a Bing search for grounding data. Deploying an AI agent requires data plane access to Azure AI Foundry. In this architecture, a network perimeter is established, and you must interact with the Azure AI Foundry portal and its resources from within the network.
 
-The AI agent definition would likely be deployed from your application's pipeline running from a build agent in your workload's network or it could be deployed via singleton code in your web application. In this deployment, you'll create the agent from the jump box, which most closely simulates pipeline-based creation.
+The AI agent definition would likely be deployed from your application's pipeline running from a build agent in your workload's network, or could be deployed via singleton code in your web application. In this deployment, you'll create an agent from the jump box, which most closely simulates pipeline-based creation.
 
-1. Connect to the virtual network via the deployed [Azure Bastion and the jump box](https://learn.microsoft.com/azure/bastion/bastion-connect-vm-rdp-windows#rdp). Alternatively, you can connect through a force-tunneled VPN or virtual network peering that you manually configure apart from these instructions.
+1. [] In the **rg-chat-baseline** resource group's **Overview** page, find and select the **vm-jump-box** virtual machine.
 
-   The username for the Windows jump box deployed in this solution is **vmadmin**. You provided **@lab.VirtualMachine(Win11-Pro-Base).Password** as the password during the deployment.
+    !IMAGE[4sqlerhm.jpg](instructions300210/4sqlerhm.jpg)
 
-   | :computer: | Unless otherwise noted, the following steps are performed from the jump box or from your VPN-connected workstation. The instructions are written as if you are using the provided Windows jump box.|
-   | :--------: | :------------------------- |
+1. [] On the top menu bar, select **Connect**, then select **Connect via Bastion**.
 
-1. Open PowerShell from the Terminal app. Log in and select your target subscription.
+    !IMAGE[evhj5ghh.jpg](instructions300210/evhj5ghh.jpg)
 
-   ```powershell
-   az login
-   ```
+1. [] Enter the following credentials set during deployment, then select **Connect**.
 
-1. Set the base name to the same value it was when you deployed the resources.
+    | Item | Value |
+    |:---------|:---------|
+    | Username | `vmadmin` |
+    | Password | `@lab.VirtualMachine(Win11-Pro-Base).Password` |
 
-   ```powershell
-   $BASE_NAME="@lab.LabInstance.Id"
-   ```
+    >[!alert] Unless otherwise stated, the following steps are all performed within the **vm-jump-box** virtual machine.
 
-1. Generate some variables to set context within your jump box.
+1. [] In the newly launched Bastion tab, Select **Allow** on the Edge prompt to **See text and images copied to the clipboard**. 
 
-   *The following variables align with the defaults in this deployment. Update them if you customized anything.*
+    !IMAGE[84wja34h.jpg](instructions300210/84wja34h.jpg)
 
-   ```powershell
-$RESOURCE_GROUP="rg-chat-baseline"
-$AI_FOUNDRY_NAME="aif${BASE_NAME}"
-$BING_CONNECTION_NAME="bingaiagent${BASE_NAME}"
-$AI_FOUNDRY_PROJECT_NAME="projchat"
-$MODEL_CONNECTION_NAME="agent-model"
-$BING_CONNECTION_ID="$(az cognitiveservices account show -n $AI_FOUNDRY_NAME -g $RESOURCE_GROUP --query 'id' --out tsv)/projects/${AI_FOUNDRY_PROJECT_NAME}/connections/${BING_CONNECTION_NAME}"
-$AI_FOUNDRY_AGENT_CREATE_URL="https://${AI_FOUNDRY_NAME}.services.ai.azure.com/api/projects/${AI_FOUNDRY_PROJECT_NAME}/assistants?api-version=2025-05-15-preview"
+1. [] Select **Next** and **Accept** the prompts for Windows 11 personalization.
 
-echo $BING_CONNECTION_ID
-echo $MODEL_CONNECTION_NAME
-echo $AI_FOUNDRY_AGENT_CREATE_URL
-   ```
+1. [] Once connected to the VM, select the **Start menu**, then find and select +++PowerShell+++.
 
-1. Deploy the agent.
+1. [] In PowerShell, sign in to Azure, then select your target subscription.
 
-   *This step simulates deploying an AI agent through your pipeline from a network-connected build agent.*
+    +++az login+++
 
-   ```powershell
-   # Use the agent definition on disk
-   Invoke-WebRequest -Uri "https://github.com/Azure-Samples/openai-end-to-end-baseline/raw/refs/heads/main/agents/chat-with-bing.json" -OutFile "chat-with-bing.json"
+1. [] In the **Sign in** dialog, select **Work or school account**, then select **Continue**.
 
-   # Update to match your environment
-   ${c:chat-with-bing-output.json} = ${c:chat-with-bing.json} -replace 'MODEL_CONNECTION_NAME', $MODEL_CONNECTION_NAME -replace 'BING_CONNECTION_ID', $BING_CONNECTION_ID
+    !IMAGE[3qksutwf.jpg](instructions300210/3qksutwf.jpg)
 
-   # Deploy the agent
-   az rest -u $AI_FOUNDRY_AGENT_CREATE_URL -m "post" --resource "https://ai.azure.com" -b @chat-with-bing-output.json
+1. [] Sign in with your lab credentials:
 
-   # Capture the Agent's ID
-   $AGENT_ID="$(az rest -u $AI_FOUNDRY_AGENT_CREATE_URL -m 'get' --resource 'https://ai.azure.com' --query 'data[0].id' -o tsv)"
+    | Item | Value |
+    |:---------|:---------|
+    | Username | +++@lab.CloudPortalCredential(User1).Username+++ |
+    | Password | +++@lab.CloudPortalCredential(User1).Password+++ |
 
-   echo $AGENT_ID
-   ```
+1. [] In the **Automatically sign in...** dialog, select **No, this app only**.
+
+1. [] Select **Enter** to choose the default Azure subscription.
+
+1. [] Set the base name to the same value it was when you deployed the resources.
+
+    +++$BASE_NAME="@lab.LabInstance.Id"+++
+
+1. [] In your lab VM, NOT the Bastion tab, select the **Start menu**, select **Notepad**.
+
+    >[!alert] Due to limitations, the following code blocks of `Type Text` can't be entered directly into the Bastion tab for **vm-jump-box**.
+    >
+    > Instead, you'll be using Type Text in the lab VM, then copying that data from the lab VM over to **vm-jump-box**.
+
+1. [] In Notepad, enter the following code block:
+
+    ```powershell
+    $RESOURCE_GROUP="rg-chat-baseline"
+    $AI_FOUNDRY_NAME="aif${BASE_NAME}"
+    $BING_CONNECTION_NAME="bingaiagent${BASE_NAME}"
+    $AI_FOUNDRY_PROJECT_NAME="projchat"
+    $MODEL_CONNECTION_NAME="agent-model"
+    $BING_CONNECTION_ID="$(az cognitiveservices account show -n $AI_FOUNDRY_NAME -g $RESOURCE_GROUP --query 'id' --out tsv)/projects/${AI_FOUNDRY_PROJECT_NAME}/connections/${BING_CONNECTION_NAME}"
+    $AI_FOUNDRY_AGENT_CREATE_URL="https://${AI_FOUNDRY_NAME}.services.ai.azure.com/api/projects/${AI_FOUNDRY_PROJECT_NAME}/assistants?api-version=2025-05-15-preview"
+
+    echo $BING_CONNECTION_ID
+    echo $MODEL_CONNECTION_NAME
+    echo $AI_FOUNDRY_AGENT_CREATE_URL
+    ```
+
+1. [] Copy all the content in Notepad.
+
+1. [] Switch to the **vm-jump-box** tab in Edge, then select **Ctrl+V** or **right-click** to paste it in the PowerShell window.
+
+1. [] Select **Paste anyway** on the Warning dialog.
+
+    !IMAGE[mgx97jzk.jpg](instructions300210/mgx97jzk.jpg)
+
+1. [] Select **Enter**.
+
+    !IMAGE[nyubqgjj.jpg](instructions300210/nyubqgjj.jpg)
+
+    >[!note] This generates some variables to set context within your jump box.
+
+1. [] Switch back to the lab VM's Notepad window.
+
+    !IMAGE[5w71b8tz.jpg](instructions300210/5w71b8tz.jpg)
+
+1. [] Replace Notepad's content with the following code block:
+
+    ```powershell
+    # Use the agent definition on disk
+    Invoke-WebRequest -Uri "https://github.com/Azure-Samples/openai-end-to-end-baseline/raw/refs/heads/main/agents/chat-with-bing.json" -OutFile "chat-with-bing.json"
+
+    # Update to match your environment
+    ${c:chat-with-bing-output.json} = ${c:chat-with-bing.json} -replace 'MODEL_CONNECTION_NAME', $MODEL_CONNECTION_NAME -replace 'BING_CONNECTION_ID', $BING_CONNECTION_ID
+
+    # Deploy the agent
+    az rest -u $AI_FOUNDRY_AGENT_CREATE_URL -m "post" --resource "https://ai.azure.com" -b @chat-with-bing-output.json
+
+    # Capture the Agent's ID
+    $AGENT_ID="$(az rest -u $AI_FOUNDRY_AGENT_CREATE_URL -m 'get' --resource 'https://ai.azure.com' --query 'data[0].id' -o tsv)"
+
+    echo $AGENT_ID
+    ```
+
+1. [] Copy the all the content in Notepad.
+
+1. [] Switch back to the **vm-jump-box** tab in Edge, then select **Ctrl+V** or **right-click** to paste it in the PowerShell window.
+
+1. [] Select **Paste anyway** on the Warning dialog.
+
+    !IMAGE[mgx97jzk.jpg](instructions300210/mgx97jzk.jpg)
+
+1. [] Select **Enter**.
+
+    !IMAGE[u7tvhzah.jpg](instructions300210/u7tvhzah.jpg)
+
+    >[!note] This deploys the agent and simulates deployment through your pipeline from a network-connected build agent.
+
 ===
 
-### Exercise 3. Test the agent from the Azure AI Foundry portal in the playground. *Optional.*
+### (Optional) Exercise 3. Test the agent from the Azure AI Foundry portal in the playground.
 
-Here you'll test your orchestration agent by invoking it directly from the Azure AI Foundry portal's playground experience. The Azure AI Foundry portal is only accessible from your private network, so you'll do this from your jump box.
+>[!note] This exercise is optional.
 
-*This step testing step is completely optional.*
+Here, you'll test your orchestration agent by invoking it directly from the Azure AI Foundry portal's playground experience. The Azure AI Foundry portal is only accessible from your private network, so you'll do this from the **vm-jump-box** virtual machine.
 
-1. Open the Azure portal to your subscription.
+1. [] In the **vm-jump-box** virtual machine, open Microsoft Edge.
 
-   You'll need to sign in to the Azure portal, and resolve any Entra ID Conditional Access policies on your account, if this is the first time you are connecting through the jump box.
+    !IMAGE[qqf0v2b2.jpg](instructions300210/qqf0v2b2.jpg)
 
-1. Navigate to the Azure AI Foundry project named **projchat** in your resource group and open the Azure AI Foundry portal by clicking the **Go to Azure AI Foundry portal** button.
+1. [] Confirm or cancel choices through Edge's first-time setup prompts.
 
-   This will take you directly into the 'Chat project'. Alternatively, you can find all your AI Foundry accounts and projects by going to <https://ai.azure.com> and you do not need to use the Azure portal to access them.
+1. [] Go to +++portal.azure.com+++.
 
-1. Click **Agents** in the side navigation.
+1. [] Sign in with the following lab credentials:
 
-1. Select the agent named 'Baseline Chatbot Agent'.
+    | Item | Value |
+    |:---------|:---------|
+    | Username | +++@lab.CloudPortalCredential(User1).Username+++ |
+    | Password | +++@lab.CloudPortalCredential(User1).Password+++ |
 
-1. Click the **Try in playground** button.
+1. [] In the Azure portal, select the portal menu icon in the upper-left corner, then select **Resource groups**.
 
-1. Enter a question that would require grounding data through recent internet content, such as a notable recent event or the weather today in your location.
+    !IMAGE[d7d8uwm4.jpg](instructions300210/d7d8uwm4.jpg)
 
-1. A grounded response to your question should appear on the UI.
+1. [] Select the **rg-chat-baseline** resource group.
+
+1. [] Find and select the **projchat** Azure AI Foundry project.
+
+    !IMAGE[zve2ukj6.jpg](instructions300210/zve2ukj6.jpg)
+
+1. [] Select **Go to Azure AI Foundry portal**.
+
+    !IMAGE[s2m1jbm0.jpg](instructions300210/s2m1jbm0.jpg)
+
+    >[!knowledge] Alternatively, you can find your Azure AI Foundry accounts and projects going directly to +++ai.azure.com+++, bypassing the Azure portal.
+
+1. [] Select **Agents** in the leftmost navigation.
+
+1. [] Select **Baseline Chatbot Agent**.
+
+    !IMAGE[0x6edc9d.jpg](instructions300210/0x6edc9d.jpg)
+
+1. [] Under the **Setup** section that opens, select **Try in playground**.
+
+    !IMAGE[6x1psoo8.jpg](instructions300210/6x1psoo8.jpg)
+
+1. [] Enter a question that would require grounding data through recent internet content, such as a notable recent event or the weather today in your location.
+
+    +++How's the weather in Atlanta, GA?+++
+
+1. [] Observe the response.
+
+    !IMAGE[s7fl3i5a.jpg](instructions300210/s7fl3i5a.jpg)
 
 ===
 
@@ -281,33 +415,33 @@ In a production environment, you use a CI/CD pipeline to:
 
 - Build your web application
 - Create the project zip package
-- Upload the zip file to your Storage account from compute that is in or connected to the workload's virtual network.
+- Upload the zip file to your Storage account from a compute that is in or connected to the workload's virtual network.
 
-For this deployment guide, you'll continue using your jump box to simulate part of that process.
+>[!alert] For this deployment guide, you'll continue using **vm-jump-box** to simulate part of that process.
 
-1. Using the same PowerShell terminal session from previous steps, download the web UI.
+1. [] In **vm-jump-box**, reopen PowerShell from the task bar.
 
-   ```powershell
-   Invoke-WebRequest -Uri https://github.com/Azure-Samples/openai-end-to-end-baseline/raw/refs/heads/main/website/chatui.zip -OutFile chatui.zip
-   ```
+    !IMAGE[1gseu390.jpg](instructions300210/1gseu390.jpg)
 
-1. Upload the web application to Azure Storage, where the web app will load the code from.
+1. [] In PowerShell, download the web UI.
 
-   ```powershell
-   az storage blob upload -f chatui.zip --account-name "stwebapp${BASE_NAME}" --auth-mode login -c deploy -n chatui.zip
-   ```
+    +++Invoke-WebRequest -Uri https://github.com/Azure-Samples/openai-end-to-end-baseline/raw/refs/heads/main/website/chatui.zip -OutFile chatui.zip+++
 
-1. Update the app configuration to use the agent you deployed.
+1. [] Upload the web application to Azure Storage, where the web app will load the code from.
 
-   ```powershell
-   az webapp config appsettings set -n "app-${BASE_NAME}" -g $RESOURCE_GROUP --settings AIAgentId="${AGENT_ID}"
-   ```
+    +++az storage blob upload -f chatui.zip --account-name "stwebapp${BASE_NAME}" --auth-mode login -c deploy -n chatui.zip+++
 
-1. Restart the web app to load the site code and its updated configuation.
+    !IMAGE[uzxb0vfk.jpg](instructions300210/uzxb0vfk.jpg)
 
-   ```powershell
-   az webapp restart --name "app-${BASE_NAME}" --resource-group $RESOURCE_GROUP
-   ```
+1. [] Update the app configuration to use the agent you deployed.
+
+    +++az webapp config appsettings set -n "app-${BASE_NAME}" -g $RESOURCE_GROUP --settings AIAgentId="${AGENT_ID}"+++
+
+1. [] Restart the web app to load the site code and its updated configuation.
+
+    +++az webapp restart --name "app-${BASE_NAME}" --resource-group $RESOURCE_GROUP+++
+
+    !IMAGE[hu49ppuc.jpg](instructions300210/hu49ppuc.jpg)
 
 ===
 
@@ -315,25 +449,96 @@ For this deployment guide, you'll continue using your jump box to simulate part 
 
 This section will help you to validate that the workload is exposed correctly and responding to HTTP requests. This will validate that traffic is flowing through Application Gateway, into your Web App, and from your Web App, into the Azure AI Foundry agent API endpoint, which hosts the agent and its chat history. The agent will interface with Bing for grounding data and an OpenAI model for generative responses.
 
-| :computer: | Unless otherwise noted, the following steps are all performed from your original workstation, not from the jump box. |
-| :--------: | :------------------------- |
+1. [] Close the tab for the **vm-jump-box** virtual machine.
 
-1. Get the public IP address of the Application Gateway.
+1. [] In the Azure portal, select **Cloud Shell** from the global controls at the top of the page, which should relaunch a Bash terminal.
 
-   ```bash
-   # Query the Azure Application Gateway Public IP
-   APPGW_PUBLIC_IP=$(az network public-ip show -g $RESOURCE_GROUP -n "pip-$BASE_NAME" --query [ipAddress] --output tsv)
-   echo APPGW_PUBLIC_IP: $APPGW_PUBLIC_IP
-   ```
+    !IMAGE[xq2vpkqc.jpg](instructions300210/xq2vpkqc.jpg)
 
-1. Create an A record for DNS.
+1. [] In Cloud Shell, get the public IP address of the Application Gateway.
 
-   > :bulb: You can simulate this via a local hosts file modification.  Alternatively, you can add a real DNS entry for your specific deployment's application domain name if permission to do so.
+    +++APPGW_PUBLIC_IP=$(az network public-ip show -g rg-chat-baseline -n "pip-@lab.LabInstance.Id" --query [ipAddress] --output tsv)+++
+    
+1. [] Print the public IP address:
 
-   Map the Azure Application Gateway public IP address to the application domain name. To do that, please edit your hosts file (C:\Windows\System32\drivers\etc\hosts or /etc/hosts) and add the following record to the end: ${APPGW_PUBLIC_IP} www.${DOMAIN_NAME_APPSERV} (e.g. 50.140.130.120  www.contoso.com)
+    +++echo APPGW_PUBLIC_IP: $APPGW_PUBLIC_IP+++
 
-1. Browse to the site (e.g. <https://www.contoso.com>).
+    !IMAGE[zpv05uy6.jpg](instructions300210/zpv05uy6.jpg)
 
-   > :bulb: It may take up to a few minutes for the App Service to start properly. Remember to include the protocol prefix `https://` in the URL you type in your browser's address bar. A TLS warning will be present due to using a self-signed certificate. You can ignore it or import the self-signed cert (`appgw.pfx`) to your user's trusted root store.
+1. [] Copy and paste the value of **APPGW_PUBLIC_IP** into the following text box:
 
-   Once you're there, ask your solution a question. Your question should involve something that would only be known if the RAG process included context from Bing such as recent weather or events.
+    @lab.TextBox(publicIp)
+
+1. [] Minimize Microsoft Edge.
+
+1. [] On the desktop, right-click **Notepad++**, then select **Run as administrator**.
+
+    !IMAGE[my8bbh37.jpg](instructions300210/my8bbh37.jpg)
+
+1. [] Select **Yes** in the **User Account Control** dialog.
+
+1. [] If prompted to update Notepad++, select **No**.
+
+1. [] In Notepad++, select **File** in the upper-left corner, then select **Open**.
+
+1. [] In the **Open** window, select the empty space in the address bar path field to modify the file path.
+
+    !IMAGE[5748zda1.jpg](instructions300210/5748zda1.jpg)
+
+1. [] Enter `C:\Windows\System32\drivers\etc`, then select **Enter**.
+
+    !IMAGE[n340wvei.jpg](instructions300210/n340wvei.jpg)
+
+1. [] Select **hosts**, then select **Open** in the lower-right corner of the window.
+
+    !IMAGE[pp1lwowq.jpg](instructions300210/pp1lwowq.jpg)
+
+    >[!note] You'll simulate the creation of an **A record** via a local **hosts** file modification.
+
+1. [] Below the existing lines in the file, enter a new line, then enter the following:
+
+    `@lab.Variable(publicIp) www.contoso.com`
+
+    !IMAGE[tcoznuh8.jpg](instructions300210/tcoznuh8.jpg)
+
+    >[!note] This uses the IP address you entered in the text box above for **APPGW_PUBLIC_IP**.
+
+1. [] Select **File**, then select **Save**.
+
+    !IMAGE[855yevko.jpg](instructions300210/855yevko.jpg)
+
+1. [] In Microsoft Edge, open a new tab, then go to `https://www.contoso.com`.
+
+1. [] At the **Your connection isn't private** warning, select **Advanced**.
+
+    !IMAGE[8k3gbjs6.jpg](instructions300210/8k3gbjs6.jpg)
+
+1. [] Select **Continue to www.contoso.com (unsafe)**
+
+    !IMAGE[p5rt9l9j.jpg](instructions300210/p5rt9l9j.jpg)
+
+    >[!alert] It may take a few minutes for the App Service to start properly.
+
+1. [] Ask a question that involves something that would only be known if the RAG process included context from Bing, such as recent weather or events.
+
+    `What are the current mortgage interest rates in the US?`
+
+    !IMAGE[am4z4v3l.jpg](instructions300210/am4z4v3l.jpg)
+
+===
+
+@lab.ActivityGroup(completionsurvey)
+
+
+##**IMPORTANT**
+**REPORTING NOTE:** These labs are hosted on the Skillable platform. Completion data is collected by CSU and then exported to Success Factors every Monday. SF requires another 1-3 days to process that data. The status for this Lab will be visible in Viva and Learning Paths, etc., by Thursday of next week.
+ 
+Be sure to click **End Lab** to get credit for completing this lab.
+
+>[!note] Please select **Submit your responses**, then select **Next** to proceed.
+
+=== 
+
+Congratulations!
+
+You've successfully completed the lab. Select **End** to mark the lab as **Complete**.
